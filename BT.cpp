@@ -37,6 +37,45 @@ bool isOperator(char ch)
     return false;
 }
 
+bool updatePreviousDigitStatus(stack<ExpressionNode*>& node, int number)
+{
+    if(number!= 0)
+    {
+        ExpressionNode* newNode = new ExpressionNode(number);
+        node.push(newNode);
+        return false;
+    }
+    return false;
+}
+
+bool handleNegative(stack<char>& chStack, stack<ExpressionNode*>& pNodeStack, bool isNegative)
+{
+    if(isNegative)
+    {
+        ExpressionNode* negativeRootNode = new ExpressionNode(chStack.top());
+        chStack.pop();
+        negativeRootNode->right = pNodeStack.top();
+        pNodeStack.pop();
+        pNodeStack.push(negativeRootNode);
+       
+    }
+    return false;
+}
+
+void buildSubtree(stack<char>& chStack, stack<ExpressionNode*>& pNodeStack)
+{
+     ExpressionNode* newRootNode = new ExpressionNode(chStack.top());
+     chStack.pop();
+     newRootNode->right = pNodeStack.top();
+     pNodeStack.pop();
+     newRootNode->left = pNodeStack.top();
+     pNodeStack.pop();
+     if(!chStack.empty())
+     {
+         chStack.pop(); // pop left bracket
+     }
+     pNodeStack.push(newRootNode);
+}
 ExpressionNode* constructBTFromStringExpression(string str)
 {
     stack<char> chStack;
@@ -49,20 +88,13 @@ ExpressionNode* constructBTFromStringExpression(string str)
     {
         if(isOperator(str[i]))
         {
-            if(currentNumber!= 0)
-            {
-                cout<< currentNumber << " ";
-                ExpressionNode* newNode = new ExpressionNode(currentNumber);
-                pNodeStack.push(newNode);
-                currentNumber = 0;
-                previousIsDigit = false;
-            }
+            previousIsDigit = updatePreviousDigitStatus(pNodeStack,currentNumber);
+            currentNumber = 0;
             if(previousIsOperator && str[i] == '-')
             {
                 isNegative = true;
             }
             previousIsOperator = true;
-            //cout<< str[i] << " ";
             chStack.push(str[i]);
         }
         else if(isDigit(str[i]))
@@ -76,75 +108,20 @@ ExpressionNode* constructBTFromStringExpression(string str)
         }
         else if(str[i] == ')')
         {
-            if(currentNumber!= 0)
-            {
-                //cout<< currentNumber << " ";
-                ExpressionNode* newNode = new ExpressionNode(currentNumber);
-                pNodeStack.push(newNode);
-                currentNumber = 0;
-                previousIsDigit = false;
-            }
+            previousIsDigit = updatePreviousDigitStatus(pNodeStack,currentNumber);
+            currentNumber = 0;
             previousIsOperator = false;
-            if(isNegative)
-            {
-                isNegative = false;
-                ExpressionNode* negativeRootNode = new ExpressionNode(chStack.top());
-                chStack.pop();
-                if(pNodeStack.size() != 1)
-                {
-                    negativeRootNode->right = pNodeStack.top();
-                }
-                else
-                {
-                    negativeRootNode->left = pNodeStack.top();
-                }
-                pNodeStack.pop();
-                pNodeStack.push(negativeRootNode);
-            }
-            ExpressionNode* newRootNode = new ExpressionNode(chStack.top());
-            chStack.pop();
-            newRootNode->right = pNodeStack.top();
-            pNodeStack.pop();
-            newRootNode->left = pNodeStack.top();
-            pNodeStack.pop();
-            chStack.pop(); // pop left bracket
-            pNodeStack.push(newRootNode);
+            isNegative = handleNegative(chStack,pNodeStack, isNegative);
+            buildSubtree(chStack,pNodeStack);
         }
     }
 
-    if(currentNumber!= 0)
-    {
-        ExpressionNode* newNode = new ExpressionNode(currentNumber);
-        pNodeStack.push(newNode);
-    }
-     if(isNegative)
-            {
-                isNegative = false;
-                ExpressionNode* negativeRootNode = new ExpressionNode(chStack.top());
-                chStack.pop();
-                if(pNodeStack.size() != 1)
-                {
-                    negativeRootNode->right = pNodeStack.top();
-                }
-                else
-                {
-                    negativeRootNode->left = pNodeStack.top();
-                }
-                pNodeStack.pop();
-                pNodeStack.push(negativeRootNode);
-            }
+    previousIsDigit = updatePreviousDigitStatus(pNodeStack,currentNumber);
+    isNegative =  handleNegative(chStack,pNodeStack, isNegative);
+
    while(!chStack.empty())
     {
-        ExpressionNode* newRootNode = new ExpressionNode(chStack.top());
-        //cout<< newRootNode->exp;
-            chStack.pop();
-            newRootNode->right = pNodeStack.top();
-            //cout<< pNodeStack.top()->val;
-            pNodeStack.pop();
-            newRootNode->left = pNodeStack.top();
-            //cout<< pNodeStack.top()->val;
-            pNodeStack.pop();
-            pNodeStack.push(newRootNode);
+        buildSubtree(chStack,pNodeStack);
     }
     if(pNodeStack.top() == NULL)
     {
@@ -158,12 +135,10 @@ int getResult(ExpressionNode* root)
 {
     if(root == NULL) return 0;
     if(root->left == NULL && root->right == NULL){
-        cout<< root->val;
         return root->val;
     } 
     int l = getResult(root->left);
     int r = getResult(root->right);
-    cout<< "l " << l << "r " << r << endl;
     if(root->exp == '*' || root->exp == 'x')
     {
         return l*r;
@@ -200,9 +175,12 @@ void inOrder(ExpressionNode* root)
 
 int main()
 {
-    string str7 = "(1+-4)*-3";
-    string str8 = "((15/(7-(1+1)))*-3)-(2+(1+1))";
-    inOrder(constructBTFromStringExpression(str7));
-    cout<< getResult(constructBTFromStringExpression(str7));
+    string testCases[4] = { "2-2", "9x9" , "(1+1)x2", "((15/(7-(1+1)))*-3)-(2+(1+1))"};
+    for(int i= 0; i< 4; i++)
+    {
+        cout<< endl << "The binary tree is presented with inorder traversal: ";
+        inOrder(constructBTFromStringExpression(testCases[i]));
+        cout<< endl << "The answer is " << getResult(constructBTFromStringExpression(testCases[i]));
+    }
     return 0;
 }
